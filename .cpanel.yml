@@ -1,11 +1,38 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/painclin/public_html/pain
+    - export DEP=/home/painclin/public_html/pain/wp-content
+    - /bin/mkdir -p $DEP/themes
+    - /bin/mkdir -p $DEP/plugins
 
-    - /bin/mkdir -p $DEPLOYPATH/wp-content/themes/pain-clinic-theme
-    - /bin/mkdir -p $DEPLOYPATH/wp-content/plugins
+    # === THEME: pain-clinic-theme ===
+    # Try common repo layouts in order, deploy first one that exists
+    - |
+      set -e
+      SRC=""
+      for CAND in \
+        "./wp-content/themes/pain-clinic-theme" \
+        "./themes/pain-clinic-theme" \
+        "./theme/pain-clinic-theme" \
+        "./pain-clinic-theme"
+      do
+        if [ -d "$CAND" ]; then SRC="$CAND"; break; fi
+      done
+      if [ -n "$SRC" ]; then
+        echo "Deploying theme from: $SRC"
+        /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" "$SRC/" "$DEP/themes/pain-clinic-theme/"
+      else
+        echo "WARNING: theme source not found in repo; skipped."
+      fi
 
-    # adjust the source paths below to match your repo's folders exactly
-    - /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" ./wp-content/themes/pain-clinic-theme/ $DEPLOYPATH/wp-content/themes/pain-clinic-theme/
-    - /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" ./wp-content/plugins/ $DEPLOYPATH/wp-content/plugins/
+    # === PLUGINS (optional) ===
+    - |
+      if [ -d "./wp-content/plugins" ]; then
+        echo "Deploying custom plugins from ./wp-content/plugins"
+        /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" "./wp-content/plugins/" "$DEP/plugins/"
+      elif [ -d "./plugins" ]; then
+        echo "Deploying custom plugins from ./plugins"
+        /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" "./plugins/" "$DEP/plugins/"
+      else
+        echo "No custom plugins folder found; skipped."
+      fi
