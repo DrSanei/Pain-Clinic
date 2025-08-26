@@ -1,0 +1,15 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/painclin/pain-clinic.ir/
+
+    - /bin/mkdir -p $DEPLOYPATH/wp-content/themes/pain-clinic-theme/
+    - /bin/mkdir -p $DEPLOYPATH/wp-content/plugins/
+
+    - /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" \
+      ./wp-content/themes/pain-clinic-theme/ \
+      $DEPLOYPATH/wp-content/themes/pain-clinic-theme/
+
+    - /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" \
+      ./wp-content/plugins/ \
+      $DEPLOYPATH/wp-content/plugins/
