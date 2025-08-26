@@ -1,37 +1,31 @@
 ---
 deployment:
   tasks:
-    # Absolute paths so cwd doesn't matter
-    - export REPO=/home/painclin/repositories/Pain-Clinic
-    - export SRC_THEME=$REPO/app/public/wp-content/themes/pain-clinic-theme
-    - export SRC_PLUGINS=$REPO/app/public/wp-content/plugins
+    - export REPO="/home/painclin/repositories/Pain-Clinic"
+    - export SRC_THEME="$REPO/app/public/wp-content/themes/pain-clinic-theme"
+    - export SRC_PLUGINS="$REPO/app/public/wp-content/plugins"
 
-    - export DOCROOT=/home/painclin/public_html/pain
-    - export DEST_THEME=$DOCROOT/wp-content/themes/pain-clinic-theme
-    - export DEST_PLUGINS=$DOCROOT/wp-content/plugins
+    - export DOCROOT="/home/painclin/public_html/pain"
+    - export DEST_THEME="$DOCROOT/wp-content/themes/pain-clinic-theme"
+    - export DEST_PLUGINS="$DOCROOT/wp-content/plugins"
 
-    # Ensure targets
-    - /bin/mkdir -p $DEST_THEME
-    - /bin/mkdir -p $DEST_PLUGINS
+    # Ensure targets exist
+    - /bin/mkdir -p "$DEST_THEME"
+    - /bin/mkdir -p "$DEST_PLUGINS"
 
-    # Diagnostics: prove sources exist
+    # Pick rsync path
+    - if [ -x /usr/bin/rsync ]; then export RSYNC=/usr/bin/rsync; else export RSYNC=/bin/rsync; fi
+    - echo "Using RSYNC at: $RSYNC"
+
+    # Diagnostics
     - echo "== ls SRC_THEME ==" && /bin/ls -la "$SRC_THEME" || true
     - echo "== ls SRC_PLUGINS ==" && /bin/ls -la "$SRC_PLUGINS" || true
 
-    # Copy theme (now with absolute src)
-    - >
-      if [ -d "$SRC_THEME" ]; then
-        echo "SYNC THEME from $SRC_THEME => $DEST_THEME";
-        /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" "$SRC_THEME/" "$DEST_THEME/";
-      else
-        echo "ERROR: theme source not found at $SRC_THEME"; exit 1;
-      fi
+    # Sync THEME
+    - /bin/bash -lc '[ -d "$SRC_THEME" ] && echo "SYNC THEME $SRC_THEME => $DEST_THEME" && "$RSYNC" -av --delete --exclude=".git*" --exclude=".cpanel.yml" "$SRC_THEME/" "$DEST_THEME/" || { echo "ERROR: theme not found at $SRC_THEME"; exit 1; }'
 
-    # Copy plugins if exist (optional)
-    - >
-      if [ -d "$SRC_PLUGINS" ]; then
-        echo "SYNC PLUGINS from $SRC_PLUGINS => $DEST_PLUGINS";
-        /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" "$SRC_PLUGINS/" "$DEST_PLUGINS/";
-      else
-        echo "No plugins folder at $SRC_PLUGINS (skipping)";
-      fi
+    # Sync PLUGINS (optional)
+    - /bin/bash -lc '[ -d "$SRC_PLUGINS" ] && echo "SYNC PLUGINS $SRC_PLUGINS => $DEST_PLUGINS" && "$RSYNC" -av --delete --exclude=".git*" --exclude=".cpanel.yml" "$SRC_PLUGINS/" "$DEST_PLUGINS/" || echo "No plugins dir at $SRC_PLUGINS (skip)"'
+
+    # Marker
+    - /bin/date > "$DEST_THEME/DEPLOY_OK.txt"
