@@ -10,30 +10,39 @@ deployment:
     - /bin/mkdir -p $DEST_THEME
     - /bin/mkdir -p $DEST_PLUGINS
 
-    # === diagnostics: show what the repo actually contains (top 3 levels) ===
-    - echo "== PWD ==" && /bin/pwd
-    - echo "== tree (depth 3) ==" && /usr/bin/find . -maxdepth 3 -type d -print
+    # Diagnostics (shows what cPanel actually sees)
+    - echo "== repo pwd ==" && /bin/pwd
+    - echo "== dirs depth 3 ==" && /usr/bin/find . -maxdepth 3 -type d -print
 
-    # Try common locations (adjust/add if your repo structure is different)
-    - export SRC1=./wp-content/themes/$THEME_SLUG
-    - export SRC2=./themes/$THEME_SLUG
-    - export SRC3=./theme/$THEME_SLUG
-    - export SRC4=./$THEME_SLUG
+    # Try both possible source roots
+    - export SRC_A=./wp-content/themes/$THEME_SLUG
+    - export SRC_B=./app/public/wp-content/themes/$THEME_SLUG
 
-    # Show which ones exist
-    - /bin/ls -la $SRC1 || true
-    - /bin/ls -la $SRC2 || true
-    - /bin/ls -la $SRC3 || true
-    - /bin/ls -la $SRC4 || true
+    # Show what exists
+    - /bin/ls -la "$SRC_A" || true
+    - /bin/ls -la "$SRC_B" || true
 
-    # Copy from the first existing source (NO --delete while debugging)
-    - '[ -d "$SRC1" ] && echo "SYNC from $SRC1" && /bin/rsync -av --exclude=".git*" --exclude=".cpanel.yml" "$SRC1/" "$DEST_THEME/" || true'
-    - '[ -d "$SRC2" ] && echo "SYNC from $SRC2" && /bin/rsync -av --exclude=".git*" --exclude=".cpanel.yml" "$SRC2/" "$DEST_THEME/" || true'
-    - '[ -d "$SRC3" ] && echo "SYNC from $SRC3" && /bin/rsync -av --exclude=".git*" --exclude=".cpanel.yml" "$SRC3/" "$DEST_THEME/" || true'
-    - '[ -d "$SRC4" ] && echo "SYNC from $SRC4" && /bin/rsync -av --exclude=".git*" --exclude=".cpanel.yml" "$SRC4/" "$DEST_THEME/" || true'
+    # Copy from the first existing source (now with --delete for clean deploys)
+    - >
+      if [ -d "$SRC_A" ]; then
+        echo "SYNC from $SRC_A";
+        /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" "$SRC_A/" "$DEST_THEME/";
+      elif [ -d "$SRC_B" ]; then
+        echo "SYNC from $SRC_B";
+        /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" "$SRC_B/" "$DEST_THEME/";
+      else
+        echo "ERROR: theme source path not found (checked $SRC_A and $SRC_B)";
+        exit 1;
+      fi
 
-    # Optional plugin deploy (same idea)
-    - '[ -d "./wp-content/plugins" ] && echo "SYNC plugins ./wp-content/plugins" && /bin/rsync -av --exclude=".git*" --exclude=".cpanel.yml" "./wp-content/plugins/" "$DEST_PLUGINS/" || true'
-    - '[ -d "./plugins" ] && echo "SYNC plugins ./plugins" && /bin/rsync -av --exclude=".git*" --exclude=".cpanel.yml" "./plugins/" "$DEST_PLUGINS/" || true'
-
-    - echo "== DONE =="
+    # Plugins (if you have any)
+    - >
+      if [ -d "./wp-content/plugins" ]; then
+        echo "Plugins from ./wp-content/plugins";
+        /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" "./wp-content/plugins/" "$DEST_PLUGINS/";
+      elif [ -d "./app/public/wp-content/plugins" ]; then
+        echo "Plugins from ./app/public/wp-content/plugins";
+        /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" "./app/public/wp-content/plugins/" "$DEST_PLUGINS/";
+      else
+        echo "No plugins folder found in repo";
+      fi
