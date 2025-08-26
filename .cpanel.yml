@@ -1,59 +1,11 @@
 ---
 deployment:
   tasks:
-    # --- paths ---
-    - export WP=/home/painclin/public_html/pain
-    - export DEP=$WP/wp-content
-    - /bin/mkdir -p $DEP/themes $DEP/plugins
+    - export DEPLOYPATH=/home/painclin/public_html/pain
 
-    # --- diagnostics: show repo layout (first 3 levels) ---
-    - echo "=== REPO ROOT: $(pwd) ==="
-    - /usr/bin/find . -maxdepth 3 -type d -print
+    - /bin/mkdir -p $DEPLOYPATH/wp-content/themes/pain-clinic-theme
+    - /bin/mkdir -p $DEPLOYPATH/wp-content/plugins
 
-    # --- resolve THEME source path by trying common layouts ---
-    - |
-      set -e
-      THEME_SLUG="pain-clinic-theme"
-      SRC=""
-      for CAND in \
-        "./wp-content/themes/$THEME_SLUG" \
-        "./themes/$THEME_SLUG" \
-        "./theme/$THEME_SLUG" \
-        "./$THEME_SLUG"
-      do
-        if [ -d "$CAND" ]; then SRC="$CAND"; break; fi
-      done
-
-      if [ -n "$SRC" ]; then
-        echo ">> Found theme source at: $SRC"
-        /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" "$SRC/" "$DEP/themes/$THEME_SLUG/"
-      else
-        echo "!! Theme source not found; creating minimal theme so WP can detect it"
-        /bin/mkdir -p "$DEP/themes/$THEME_SLUG"
-        /bin/bash -lc 'cat > "$DEP/themes/'"$THEME_SLUG"'/style.css" <<EOF
-/*
-Theme Name: Pain Clinic Theme
-Template: hello-elementor
-Version: 0.1.0
-Text Domain: pain-clinic-theme
-*/
-EOF'
-        /bin/bash -lc 'cat > "$DEP/themes/'"$THEME_SLUG"'/functions.php" <<EOF
-<?php
-// Minimal functions.php to make theme loadable.
-EOF'
-      fi
-
-    # --- optional custom PLUGINS ---
-    - |
-      if [ -d "./wp-content/plugins" ]; then
-        echo ">> Deploy plugins from ./wp-content/plugins"
-        /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" "./wp-content/plugins/" "$DEP/plugins/"
-      elif [ -d "./plugins" ]; then
-        echo ">> Deploy plugins from ./plugins"
-        /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" "./plugins/" "$DEP/plugins/"
-      else
-        echo "-- No plugins folder in repo"
-      fi
-
-    - echo "=== DEPLOY DONE (Pain-Clinic) ==="
+    # adjust the source paths below to match your repo's folders exactly
+    - /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" ./wp-content/themes/pain-clinic-theme/ $DEPLOYPATH/wp-content/themes/pain-clinic-theme/
+    - /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" ./wp-content/plugins/ $DEPLOYPATH/wp-content/plugins/
