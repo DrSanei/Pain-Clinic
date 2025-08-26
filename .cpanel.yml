@@ -1,11 +1,12 @@
 ---
 deployment:
   tasks:
-    # Absolute paths so cwd doesn't matter
+    # Absolute repo & sources (copy EXACTLY the path shown in cPanel > Git)
     - export REPO=/home/painclin/repositories/Pain-Clinic
     - export SRC_THEME=$REPO/app/public/wp-content/themes/pain-clinic-theme
     - export SRC_PLUGINS=$REPO/app/public/wp-content/plugins
 
+    # Live WordPress paths (pain-clinic.ir)
     - export DOCROOT=/home/painclin/public_html/pain
     - export DEST_THEME=$DOCROOT/wp-content/themes/pain-clinic-theme
     - export DEST_PLUGINS=$DOCROOT/wp-content/plugins
@@ -14,11 +15,11 @@ deployment:
     - /bin/mkdir -p $DEST_THEME
     - /bin/mkdir -p $DEST_PLUGINS
 
-    # Diagnostics: prove sources exist
+    # Diagnostics
     - echo "== ls SRC_THEME ==" && /bin/ls -la "$SRC_THEME" || true
     - echo "== ls SRC_PLUGINS ==" && /bin/ls -la "$SRC_PLUGINS" || true
 
-    # Copy theme (now with absolute src)
+    # Copy THEME
     - >
       if [ -d "$SRC_THEME" ]; then
         echo "SYNC THEME from $SRC_THEME => $DEST_THEME";
@@ -27,7 +28,7 @@ deployment:
         echo "ERROR: theme source not found at $SRC_THEME"; exit 1;
       fi
 
-    # Copy plugins if exist (optional)
+    # Copy PLUGINS (optional)
     - >
       if [ -d "$SRC_PLUGINS" ]; then
         echo "SYNC PLUGINS from $SRC_PLUGINS => $DEST_PLUGINS";
@@ -35,3 +36,6 @@ deployment:
       else
         echo "No plugins folder at $SRC_PLUGINS (skipping)";
       fi
+
+    # Mark success visibly
+    - /bin/date > "$DEST_THEME/DEPLOY_OK.txt"
