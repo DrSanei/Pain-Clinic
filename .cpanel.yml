@@ -1,11 +1,39 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/painclin/public_html/pain
+    - export DOCROOT=/home/painclin/public_html/pain
+    - export THEME_SLUG=pain-clinic-theme
+    - export DEST_THEME=$DOCROOT/wp-content/themes/$THEME_SLUG
+    - export DEST_PLUGINS=$DOCROOT/wp-content/plugins
 
-    - /bin/mkdir -p $DEPLOYPATH/wp-content/themes/pain-clinic-theme
-    - /bin/mkdir -p $DEPLOYPATH/wp-content/plugins
+    # Ensure targets
+    - /bin/mkdir -p $DEST_THEME
+    - /bin/mkdir -p $DEST_PLUGINS
 
-    # adjust the source paths below to match your repo's folders exactly
-    - /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" ./wp-content/themes/pain-clinic-theme/ $DEPLOYPATH/wp-content/themes/pain-clinic-theme/
-    - /bin/rsync -av --delete --exclude=".git*" --exclude=".cpanel.yml" ./wp-content/plugins/ $DEPLOYPATH/wp-content/plugins/
+    # === diagnostics: show what the repo actually contains (top 3 levels) ===
+    - echo "== PWD ==" && /bin/pwd
+    - echo "== tree (depth 3) ==" && /usr/bin/find . -maxdepth 3 -type d -print
+
+    # Try common locations (adjust/add if your repo structure is different)
+    - export SRC1=./wp-content/themes/$THEME_SLUG
+    - export SRC2=./themes/$THEME_SLUG
+    - export SRC3=./theme/$THEME_SLUG
+    - export SRC4=./$THEME_SLUG
+
+    # Show which ones exist
+    - /bin/ls -la $SRC1 || true
+    - /bin/ls -la $SRC2 || true
+    - /bin/ls -la $SRC3 || true
+    - /bin/ls -la $SRC4 || true
+
+    # Copy from the first existing source (NO --delete while debugging)
+    - '[ -d "$SRC1" ] && echo "SYNC from $SRC1" && /bin/rsync -av --exclude=".git*" --exclude=".cpanel.yml" "$SRC1/" "$DEST_THEME/" || true'
+    - '[ -d "$SRC2" ] && echo "SYNC from $SRC2" && /bin/rsync -av --exclude=".git*" --exclude=".cpanel.yml" "$SRC2/" "$DEST_THEME/" || true'
+    - '[ -d "$SRC3" ] && echo "SYNC from $SRC3" && /bin/rsync -av --exclude=".git*" --exclude=".cpanel.yml" "$SRC3/" "$DEST_THEME/" || true'
+    - '[ -d "$SRC4" ] && echo "SYNC from $SRC4" && /bin/rsync -av --exclude=".git*" --exclude=".cpanel.yml" "$SRC4/" "$DEST_THEME/" || true'
+
+    # Optional plugin deploy (same idea)
+    - '[ -d "./wp-content/plugins" ] && echo "SYNC plugins ./wp-content/plugins" && /bin/rsync -av --exclude=".git*" --exclude=".cpanel.yml" "./wp-content/plugins/" "$DEST_PLUGINS/" || true'
+    - '[ -d "./plugins" ] && echo "SYNC plugins ./plugins" && /bin/rsync -av --exclude=".git*" --exclude=".cpanel.yml" "./plugins/" "$DEST_PLUGINS/" || true'
+
+    - echo "== DONE =="
