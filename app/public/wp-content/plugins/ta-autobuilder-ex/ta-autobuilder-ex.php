@@ -28,7 +28,7 @@ class TA_AutoBuilder_EX {
     $tips    = $this->page('نکات زیبایی',$this->tips());
     $offers  = $this->page('تخفیف‌ها',$this->offers());
     $reserve = $this->page('رزرو نوبت','[ta_booking]');
-    $consult = $this->page('مشاوره آنلاین',$this->consult());
+   $consult  = ta_link_by_title('مشاوره آنلاین', 'https://healio.ir/');
 
     update_option('show_on_front','page');
     update_option('page_on_front',$home);
