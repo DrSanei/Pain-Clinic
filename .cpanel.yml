@@ -1,41 +1,32 @@
 ---
 deployment:
   tasks:
-    - /bin/bash -lc '
-        set -e
+    - export REPO="/home/painclin/repositories/Pain-Clinic"
+    - export SRC_THEME="$REPO/app/public/wp-content/themes/pain-clinic-theme"
+    - export SRC_PLUGINS="$REPO/app/public/wp-content/plugins"
+    - export DOCROOT="/home/painclin/public_html/pain"
+    - export DEST_THEME="$DOCROOT/wp-content/themes/pain-clinic-theme"
+    - export DEST_PLUGINS="$DOCROOT/wp-content/plugins"
 
-        REPO="/home/painclin/repositories/Pain-Clinic"
-        SRC_THEME="$REPO/app/public/wp-content/themes/pain-clinic-theme"
-        SRC_PLUGINS="$REPO/app/public/wp-content/plugins"
+    - /bin/mkdir -p "$DEST_THEME"
+    - /bin/mkdir -p "$DEST_PLUGINS"
 
-        DOCROOT="/home/painclin/public_html/pain"
-        DEST_THEME="$DOCROOT/wp-content/themes/pain-clinic-theme"
-        DEST_PLUGINS="$DOCROOT/wp-content/plugins"
+    - /bin/ls -la "$SRC_THEME"
+    - /bin/ls -la "$SRC_PLUGINS" || true
 
-        echo "== Ensure targets ==" 
-        /bin/mkdir -p "$DEST_THEME" "$DEST_PLUGINS"
+    # Copy theme (clean)
+    - /bin/rm -rf "$DEST_THEME"
+    - /bin/mkdir -p "$DEST_THEME"
+    - /bin/cp -a "$SRC_THEME/." "$DEST_THEME/"
 
-        echo "== Show sources =="
-        /bin/ls -la "$SRC_THEME"
-        /bin/ls -la "$SRC_PLUGINS" || true
+    # Copy each plugin (loop via find, avoids inline 'then')
+    - /usr/bin/find "$SRC_PLUGINS" -mindepth 1 -maxdepth 1 -type d -exec sh -c '
+        for dir; do
+          name=$(basename "$dir")
+          echo "Deploying plugin $name"
+          rm -rf "$DEST_PLUGINS/$name"
+          cp -a "$dir" "$DEST_PLUGINS/"
+        done
+      ' sh {} +
 
-        echo "== Deploy THEME =="
-        /bin/rm -rf "$DEST_THEME"
-        /bin/mkdir -p "$DEST_THEME"
-        /bin/cp -a "$SRC_THEME/." "$DEST_THEME/"
-
-        echo "== Deploy PLUGINS =="
-        if [ -d "$SRC_PLUGINS" ]; then
-          for P in "$SRC_PLUGINS"/*; do
-            [ -e "$P" ] || continue
-            BN="$(/usr/bin/basename "$P")"
-            /bin/rm -rf "$DEST_PLUGINS/$BN"
-            /bin/cp -a "$P" "$DEST_PLUGINS/"
-          done
-        else
-          echo "No plugins dir (skip)"
-        fi
-
-        /bin/date > "$DEST_THEME/DEPLOY_OK.txt"
-        echo "== DONE (Pain-Clinic) =="
-      '
+    - /bin/date > "$DEST_THEME/DEPLOY_OK.txt"
